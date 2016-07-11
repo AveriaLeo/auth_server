@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authentification test</title>
+</head>
+<body>
+    <h2>Login test panel (editing test)</h2>
+    <b>Login: </b>
+    <br>
+    <input id='login' type='text' size 20>
+    <br>
+    <br>
+    <b>Password: </b>
+    <br>
+    <input id='password' type='password' size 20>
+    <br>
+    <br>
+    <input id='submit' type='button' value='Submit!'>
+    <script type="text/javascript" src="crypto/md5.js"></script>
+    <script>
+
+        var submit_button = document.getElementById('submit');
+        var login_textfield = document.getElementById('login');
+        var password_textfield = document.getElementById('password');
+
+        //Text fields clearing.
+        login_textfield.value = "";
+        password_textfield.value  = "";
+
+
+        //Sending input data on button click.
+        submit_button.onclick = function() {
+            //re = /[0-9]/;
+
+            var ajax = new XMLHttpRequest();
+            //Open connection
+            ajax.open("POST", "/login", true);
+            ajax.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            //ajax.withCredentials = true;
+            //Generating SHA hex
+            var result_password = hex_md5(password_textfield.value);
+            var params = "login=" + login_textfield.value + "&password=" + result_password;
+            ajax.onreadystatechange = function () {
+
+                if (ajax.readyState != 4) console.log("test");
+                if (ajax.status != 200) {
+                    console.log('ошибка' + ajax.status + ': ' + ajax.statusText);
+                    return;
+                } else {
+                    window.location = "/main";
+                }
+
+
+                console.log(ajax.responseText);
+            }
+            ajax.send(params);
+
+        }
+
+
+
+
+    </script>
+</body>
+</html>

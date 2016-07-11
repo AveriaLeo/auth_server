@@ -17,8 +17,11 @@
 Походу вообще плевать. Использую sequelize.
  */
 
+"use strict"
+
+
+
 var Passport = require("passport");
-var Mongoose = require("mongoose");
 var Express = require("express");
 var Sequelize = require("sequelize");
 var Config = require("./config/sqconfig");
@@ -29,11 +32,11 @@ var Session = require('express-session');
 
 
 
-app = Express();
+ var app = Express();
 app.use(cookieParser());
 app.use(bodyParser.json({ extended: true }));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(Session({ secret: 'SECRET' }));
+app.use(Session({ secret: 'SECRET', resave: true, saveUninitialized: true }));
 
 app.use(Passport.initialize());
 app.use(Passport.session());
@@ -54,20 +57,54 @@ sequelize
 //Определяет структуру таблицы в sequelize
 var User = sequelize.define('users_testificate', Config.servercfg.usercfg);
 
-Passport.use(new LocalStrategy({
-    usernameField: 'username',
-    passwordField: 'password'
-}, function(username, password,done){
-    User.findOne({ username : username},function(err,user){
-        return err
-            ? done(err)
-            : user
-            ? password === user.password
-            ? done(null, user)
-            : done(null, false, { message: 'Incorrect password.' })
-            : done(null, false, { message: 'Incorrect username.' });
-    });
-}));
+Passport.use(
+    new LocalStrategy({
+        usernameField: 'username',
+        passwordField: 'password'
+    }, function(username, password,done){
+
+        User.findOne({ username : username},
+            function(err,user){
+                /*
+                return err
+                    ? done(err)
+                    : user
+                    ? password === user.password
+                    ? done(null, user)
+                    : done(null, false, { message: 'Incorrect password.' })
+                    : done(null, false, { message: 'Incorrect username.' });
+                */
+
+                if (err) {
+                    return done(err);
+                }
+                if(!user) {
+                    console.log('Пользователь не найден с именем '+username);
+                    return done(null, false, { message: 'Incorrect username.' });
+                }
+                if (password != user.password) {
+                    console.log("Неправильный пароль");
+                    return done(null, false, { message: 'Incorrect password.' });
+                } else {
+                    console.log("мы вошли");
+                    return done(null, user, { message: 'Ok.' });
+                }
+            }
+        )
+    })
+);
+
+/*
+
+            ^
+            |
+   Оно работает. Вопрос в том, как оно работает.
+   Логин и пароль передаются, по карйней мере. Буду копать.
+
+ */
+
+
+
 
 Passport.serializeUser(function(user, done) {
     done(null, user.id);
@@ -88,18 +125,17 @@ Passport.deserializeUser(function(id, done) {
 var controllers = {
     users: {
         login: function(req, res, next) {
-            console.log('LOGINNING!');
             Passport.authenticate('local',
-                function(err, user, info) {
+                function(err, user) {
                     return err
                         ? next(err)
                         : user
                         ? req.logIn(user, function(err) {
                         return err
                             ? next(err)
-                            : res.redirect('/private');
+                            : res.send('Hello World');//res.redirect('/private');
                     })
-                        : res.redirect('/');
+                        : res.send('Hello World');//res.redirect('/');
                 }
             )(req, res, next);
         },
@@ -125,8 +161,13 @@ var controllers = {
                 : res.redirect('/');
         }
     }
+    /*
+    ,
+    sucessRedirect: '/',
+    failureRedirect: '/login'
+    */
 }
-
+/*
 Passport.use(new LocalStrategy({
     usernameField: 'username',
     passwordField: 'password'
@@ -141,13 +182,16 @@ Passport.use(new LocalStrategy({
             : done(null, false, { message: 'Incorrect username.' });
     });
 }));
-
+*/
 //Пост запросы на аутентификацию
 app.post('/login',                   Passport.authenticate('local'), controllers.users.login);
 app.post('/register',                Passport.authenticate('local'), controllers.users.register);
 app.get('/logout',                   Passport.authenticate('local'), controllers.users.logout);
-app.all('private',  Passport.authenticate('local'), controllers.users.mustAuthenticatedMw);
-app.all('private/*',  Passport.authenticate('local'), controllers.users.mustAuthenticatedMw);
-
+app.all('private',                   Passport.authenticate('local'), controllers.users.mustAuthenticatedMw);
+app.all('private/*',                 Passport.authenticate('local'), controllers.users.mustAuthenticatedMw);
+//Тестовый прием гета
+app.get('/test', function(req, res) {
+    res.send('Hello World');
+});
 
 app.listen(3000);
